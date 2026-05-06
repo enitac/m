@@ -5409,6 +5409,9 @@ async function displayGradesSheet() {
     // Cache for toggle re-use
     _gradeSheetData = { form, isUpperForm, studentsWithMetrics };
 
+    // Default sort by position
+    studentsWithMetrics.sort((a, b) => a.student.__numericPosition - b.student.__numericPosition);
+
     // Render table
     renderGradeSheetTable(form, isUpperForm, studentsWithMetrics);
     document.getElementById('gradeSortToggleBtn').style.display = '';
