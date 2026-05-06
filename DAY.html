@@ -754,6 +754,7 @@ function saveSelectedSubjectsToRepo() {
     #scoresTable td:nth-child(3), #gradesTable td:nth-child(3) { text-align: left; }
     /* Data entry table Name column (2nd td) left-aligned */
     #dataEntryTable td:nth-child(2) { text-align: left; }
+    #dataEntryTable { table-layout: auto; width: auto; }
     #analysisTable td { text-align: center; }
 
     /* Progress Report Layout */
@@ -1628,7 +1629,7 @@ function saveSelectedSubjectsToRepo() {
 
     <header id="reportHeader" style="width: 100%;">
         <img 
-src="https://raw.githubusercontent.com/enitac/m/main/logo.png" class="logo" alt="School Logo">
+src="https://raw.githubusercontent.com/magawass/m/main/logo.png" class="logo" alt="School Logo">
         <div id="reportHeaderCenter">
             <div style="font-family: 'Times New Roman', Times, serif;">
  <div style="text-align: center;">
@@ -1767,16 +1768,16 @@ src="https://raw.githubusercontent.com/enitac/m/main/logo.png" class="logo" alt=
     <button onclick="togglePasteGrades()" class="small-btn" style="background:#8e44ad;color:#fff;max-width:200px;margin-top:10px;margin-bottom:0;font-size:0.9em;padding:10px;">Paste Grades</button>
 
     <div id="studentMarksPanel" class="hidden">
-        <div style="display:flex;max-height:500px;overflow-y:auto;margin-top:15px;border:1px solid #6c3483;border-radius:6px;">
-            <div class="table-wrapper" style="flex:1;min-width:0;margin-top:0;border:none;">
+        <div style="display:block;max-height:500px;overflow-y:auto;margin-top:15px;border:1px solid #6c3483;border-radius:6px;width:fit-content;">
+            <div class="table-wrapper" style="min-width:0;margin-top:0;border:none;overflow-x:visible;">
                 <table id="dataEntryTable">
                     <thead>
                         <tr style="background:#ecf0f1;">
                             <th style="border:1px solid #cc6600;padding:10px;">Exam Number</th>
                             <th style="border:1px solid #cc6600;padding:10px;">Name</th>
-                            <th style="border:1px solid #cc6600;padding:10px;width:40px;">SEX</th>
+                            <th style="border:1px solid #cc6600;padding:10px;width:40px;display:none;">SEX</th>
                             <th id="sneColumnHeader" style="border:1px solid #cc6600;padding:10px;width:30px;">SNE<br><span style="font-weight:normal;font-size:0.8em;">(SN)</span></th>
-                            <th style="border:1px solid #cc6600;padding:10px;">Score</th>
+                            <th id="scoreColumnHeader" class="score-column" style="border:1px solid #cc6600;padding:10px;">Score</th>
                             <th id="pasteScoreHeader" style="border:1px solid #8e44ad;padding:10px;background:#d7bde2;color:#6c3483;display:none;text-align:center;">PASTE SCORE</th>
                         </tr>
                     </thead>
@@ -5801,7 +5802,7 @@ async function showStudentMarksList() {
         row.innerHTML = `
             <td style="border:2px solid #6c3483;padding:8px 6px;text-align:center;background:#f3e5f5;font-weight:600;font-size:0.9em;">${examNo}</td>
             <td style="border:2px solid #6c3483;padding:8px 6px;text-align:left;background:#f5f5f5;font-size:0.9em;">${name}</td>
-            <td style="border:2px solid #6c3483;padding:8px 6px;text-align:center;width:40px;background:#ede7f6;font-weight:600;font-size:0.9em;">${sex}</td>
+            <td style="border:2px solid #6c3483;padding:8px 6px;text-align:center;width:40px;background:#ede7f6;font-weight:600;font-size:0.9em;display:none;">${sex}</td>
             ${sneVisible ? `<td style="border:2px solid #6c3483;padding:8px 6px;text-align:center;width:30px;background:#ede7f6;font-size:0.85em;">
                 <input type="text" 
                        id="sn_${i}" 
@@ -5810,7 +5811,7 @@ async function showStudentMarksList() {
                        style="width:35px;padding:4px;text-align:center;border:2px solid #6c3483;border-radius:6px;font-size:0.85em;background:#f3e5f5;"
                        placeholder=" ">
             </td>` : ''}
-            <td style="border:2px solid #6c3483;padding:8px 6px;text-align:center;background:#fce4ec;">
+            <td class="score-column" style="border:2px solid #6c3483;padding:8px 6px;text-align:center;background:#fce4ec;">
                 <input type="text" 
                        id="score_${i}" 
                        value="${val}" 
@@ -8083,22 +8084,35 @@ async function savePastedStudentList() {
 
 // === PASTE GRADES (Data Entry Section) ===
 
-// Toggle the paste score column in the student marks table (hidden by default)
+// Toggle between score column and paste-score column (only one visible at a time)
 function togglePasteGrades() {
-    const header = document.getElementById('pasteScoreHeader');
-    const cells = document.querySelectorAll('.paste-score-cell');
+    const pasteHeader = document.getElementById('pasteScoreHeader');
+    const pasteCells = document.querySelectorAll('.paste-score-cell');
+    const scoreHeader = document.getElementById('scoreColumnHeader');
+    const scoreCells = document.querySelectorAll('#dataEntryTableBody .score-column');
     const applyRow = document.getElementById('pasteApplyRow');
     const btn = document.querySelector('[onclick="togglePasteGrades()"]');
-    if (!header || cells.length === 0) return;
+    if (!pasteHeader || pasteCells.length === 0) return;
 
-    const isHidden = header.style.display === 'none';
-    header.style.display = isHidden ? '' : 'none';
-    cells.forEach(function(cell) { cell.style.display = isHidden ? '' : 'none'; });
-    applyRow.style.display = isHidden ? 'block' : 'none';
-    if (btn) { btn.textContent = isHidden ? 'Hide Paste Grades' : 'Paste Grades'; btn.style.background = isHidden ? '#e74c3c' : '#8e44ad'; }
-    // Clear paste inputs when showing
-    if (isHidden) {
+    const pasteIsHidden = pasteHeader.style.display === 'none';
+    if (pasteIsHidden) {
+        // Show paste column, hide score column
+        pasteHeader.style.display = '';
+        pasteCells.forEach(function(cell) { cell.style.display = ''; });
+        if (scoreHeader) scoreHeader.style.display = 'none';
+        scoreCells.forEach(function(cell) { cell.style.display = 'none'; });
+        applyRow.style.display = 'block';
+        if (btn) { btn.textContent = 'Show Score Column'; btn.style.background = '#e74c3c'; }
+        // Clear paste inputs when showing
         document.querySelectorAll('[id^="pasteScore_"]').forEach(function(inp) { inp.value = ''; });
+    } else {
+        // Show score column, hide paste column
+        pasteHeader.style.display = 'none';
+        pasteCells.forEach(function(cell) { cell.style.display = 'none'; });
+        if (scoreHeader) scoreHeader.style.display = '';
+        scoreCells.forEach(function(cell) { cell.style.display = ''; });
+        applyRow.style.display = 'none';
+        if (btn) { btn.textContent = 'Paste Grades'; btn.style.background = '#8e44ad'; }
     }
 }
 
@@ -8170,10 +8184,14 @@ function applyPasteColumnScores() {
     msg += ' Click Save to persist.';
     alert(msg);
 
-    // Hide paste column and reset button
+    // Hide paste column, show score column, and reset button
     const header = document.getElementById('pasteScoreHeader');
     if (header) header.style.display = 'none';
     document.querySelectorAll('.paste-score-cell').forEach(function(cell) { cell.style.display = 'none'; });
+    const scoreHeader = document.getElementById('scoreColumnHeader');
+    const scoreCells = document.querySelectorAll('#dataEntryTableBody .score-column');
+    if (scoreHeader) scoreHeader.style.display = '';
+    scoreCells.forEach(function(cell) { cell.style.display = ''; });
     document.getElementById('pasteApplyRow').style.display = 'none';
     var toggleBtn = document.querySelector('[onclick="togglePasteGrades()"]');
     if (toggleBtn) { toggleBtn.textContent = 'Paste Grades'; toggleBtn.style.background = '#8e44ad'; }
